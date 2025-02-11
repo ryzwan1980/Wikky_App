@@ -1,0 +1,104 @@
+<?php
+session_start();
+include '../db.php';  
+
+// Check if admin is logged in
+if (!isset($_SESSION['user_id']) || $_SESSION['role'] !== 'admin') {
+    header("Location: login.php");
+    exit();
+}
+
+$food_data = [];
+if (isset($_POST['from_date']) && isset($_POST['to_date'])) {
+    $from_date = $_POST['from_date'];
+    $to_date = $_POST['to_date'];
+
+    // Fetch food count based on selected date range
+    $sql = "SELECT user_id, COUNT(*) AS food_count FROM food_log 
+            WHERE date BETWEEN '$from_date' AND '$to_date' 
+            GROUP BY user_id";
+    $result = $conn->query($sql);
+
+    while ($row = $result->fetch_assoc()) {
+        $food_data[] = $row;
+    }
+}
+
+// Function to download CSV
+if (isset($_POST['download_csv'])) {
+    header('Content-Type: text/csv; charset=utf-8');
+    header('Content-Disposition: attachment; filename=food_report.csv');
+
+    $output = fopen('php://output', 'w');
+    fputcsv($output, ['User ID', 'Food Count']);
+
+    foreach ($food_data as $row) {
+        fputcsv($output, $row);
+    }
+    fclose($output);
+    exit();
+}
+?>
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>User Report</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+</head>
+<body>
+    <div class="container mt-5">
+        <h2 class="text-center">User Report</h2>
+
+        <form method="POST">
+            <div class="row mb-3">
+                <div class="col-md-5">
+                    <label for="from_date" class="form-label">From Date</label>
+                    <input type="date" class="form-control" name="from_date" required>
+                </div>
+                <div class="col-md-5">
+                    <label for="to_date" class="form-label">To Date</label>
+                    <input type="date" class="form-control" name="to_date" required>
+                </div>
+                <div class="col-md-2 d-flex align-items-end">
+                    <button type="submit" class="btn btn-primary w-100">Submit</button>
+                </div>
+            </div>
+        </form>
+
+        <?php if (!empty($food_data)) { ?>
+            <table class="table mt-4">
+                <thead>
+                    <tr>
+                        <th>User ID</th>
+                        <th>Food Count</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <?php foreach ($food_data as $row) { ?>
+                        <tr>
+                            <td><?php echo $row['user_id']; ?></td>
+                            <td><?php echo $row['food_count']; ?></td>
+                        </tr>
+                    <?php } ?>
+                </tbody>
+            </table>
+
+            <form method="POST">
+                <input type="hidden" name="from_date" value="<?php echo $_POST['from_date']; ?>">
+                <input type="hidden" name="to_date" value="<?php echo $_POST['to_date']; ?>">
+                <button type="submit" name="download_csv" class="btn btn-success">Download CSV</button>
+            </form>
+        <?php } ?>
+
+        <!-- Back Button -->
+        <div class="text-center mt-3">
+            <a href="admin_dashboard.php" class="btn btn-secondary">Back</a>
+        </div>
+    </div>
+</body>
+</html>
