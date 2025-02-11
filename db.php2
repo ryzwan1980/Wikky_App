@@ -1,0 +1,38 @@
+<?php
+class Database {
+    private $servername = "localhost";
+    private $username = "foodhub_usr";
+    private $password = "FoodHub@123";
+    private $database = "foodhub_db";
+    private $conn;
+
+    public function __construct() {
+        $this->connect();
+    }
+
+    private function connect() {
+        try {
+            $this->conn = new mysqli($this->servername, $this->username, $this->password, $this->database);
+            if ($this->conn->connect_error) {
+                throw new Exception("Connection failed: " . $this->conn->connect_error);
+            }
+            // Set the charset to UTF-8 to handle special characters
+            $this->conn->set_charset("utf8mb4");
+        } catch (Exception $e) {
+            // Log the error message to a file
+            error_log($e->getMessage(), 3, '/var/log/php_errors.log');
+            // Optionally, rethrow the exception or handle it as needed
+            throw $e;
+        }
+    }
+
+    public function getConnection() {
+        return $this->conn;
+    }
+
+    public function close() {
+        $this->conn->close();
+    }
+}
+?>
+
